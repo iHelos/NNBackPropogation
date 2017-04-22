@@ -1,6 +1,10 @@
 package neural_core
 
-import ()
+import (
+	"math/rand"
+//	"fmt"
+)
+
 //import "fmt"
 
 type Activation func(x float64) float64
@@ -27,8 +31,10 @@ func NewInputLayer(input_size, output_size int, activate NeuralFunction) (*Layer
 
 	for i, _ := range weights {
 		weights[i] = make([]float64, input_size+1)
+		for k := range weights[i] {
+			weights[i][k] = 0.01 * rand.Float64()
+		}
 	}
-
 	return &Layer{
 		input_size,
 		output_size,
@@ -64,12 +70,14 @@ func (layer *Layer) getLayerPrediction(data []float64) []float64 {
 }
 
 func (layer *Layer) updateWeights(input []float64, eps float64) {
+	//fmt.Println(layer.delta)
+	//fmt.Printf("eps: %.2f\n", eps)
 	for i := 0; i < layer.output_size; i++ {
 		temp := eps * layer.delta[i]
 		for j := 0; j < layer.input_size; j++ {
 			layer.neurons[i][j] += temp * input[j]
 		}
-		layer.neurons[i][layer.output_size] += temp
+		layer.neurons[i][layer.input_size] = temp
 	}
 	for i := range layer.delta {
 		layer.delta[i] = 0

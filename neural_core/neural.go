@@ -1,10 +1,12 @@
 package neural_core
 
 import (
+	. "github.com/iHelos/NNBackPropogation/timetracker"
 	. "github.com/iHelos/NNBackPropogation/data_helper"
 	"github.com/go-errors/errors"
 	"fmt"
 	"math"
+	"time"
 )
 
 type LayerMeta struct {
@@ -47,11 +49,12 @@ func (nn *NeuralNetwork) BackwardPropagation(expected []float64) {
 	layer_errors := make([]float64, last_layer.output_size)
 	for i := range last_layer.neurons {
 		layer_errors[i] = expected[i] - last_layer.last_output_activation[i]
-		last_layer.delta[i] += layer_errors[i] * last_layer.funcs.derivative(
+		last_layer.delta[i] = layer_errors[i] * last_layer.funcs.derivative(
 			last_layer.last_output[i],
 			last_layer.last_output_activation[i],
 		)
 	}
+	//fmt.Printf("la_errs: %v", layer_errors)
 	for i := len(nn.layers) - 2; i >= 0; i-- {
 		layer := nn.layers[i]
 		layer_errors = make([]float64, layer.output_size)
@@ -63,10 +66,13 @@ func (nn *NeuralNetwork) BackwardPropagation(expected []float64) {
 			layer_errors[j] = layer_err
 		}
 		last_layer = layer
-		last_layer.delta[i] += layer_errors[i] * last_layer.funcs.derivative(
-			last_layer.last_output[i],
-			last_layer.last_output_activation[i],
-		)
+		//fmt.Println(layer_errors)
+		for k := range last_layer.neurons {
+			last_layer.delta[k] = layer_errors[k] * last_layer.funcs.derivative(
+				last_layer.last_output[k],
+				last_layer.last_output_activation[k],
+			)
+		}
 
 	}
 }
@@ -84,25 +90,28 @@ func (nn *NeuralNetwork) Learn(train_x [][]float64, train_y [][]float64, epochs 
 		panic(errors.New(fmt.Sprintf("Количество X данных: %d, кол-во Y данных: %d.", len(train_x), len(train_y))))
 	}
 	for epoch := 0; epoch < epochs; epoch++ {
-		sum_error := 0.
-		count_valid := 0
-		for i, v := range train_x {
-			nn_output := nn.ForwardPropagation(v)
-			//fmt.Println(nn_output)
-			if CompareArrays(GetArrFromProba(nn_output), train_y[i]) {
-				count_valid++
+		func() {
+			defer TimeTrack(time.Now(), "Обучение")
+			sum_error := 0.
+			count_valid := 0
+			for i, v := range train_x {
+				nn_output := nn.ForwardPropagation(v)
+				//fmt.Println(nn_output)
+				if CompareArrays(GetArrFromProba(nn_output), train_y[i]) {
+					count_valid++
+				}
+				for j, y := range train_y[i] {
+					sum_error += math.Pow((y - nn_output[j]), 2)
+				}
+				nn.BackwardPropagation(train_y[i])
+				nn.UpdateWeights(v)
 			}
-			for j, y := range train_y[i] {
-				sum_error += math.Pow((y - nn_output[j]), 2)
-			}
-			nn.BackwardPropagation(train_y[i])
-			nn.UpdateWeights(v)
-		}
-		fmt.Printf("Эпоха:%d, Среднеквадратичная ошибка:%.2f, Количество совпавших строк: %d (%.2f%%) \n",
-			epoch+1,
-			sum_error/float64(len(train_x)),
-			count_valid,
-			float64(count_valid)/float64(len(train_x))*100,
-		)
+			fmt.Printf("Эпоха:%d, Среднеквадратичная ошибка:%.2f, Количество совпавших строк: %d (%.2f%%) \n",
+				epoch+1,
+				sum_error/float64(len(train_x)),
+				count_valid,
+				float64(count_valid)/float64(len(train_x))*100,
+			)
+		}()
 	}
 }
