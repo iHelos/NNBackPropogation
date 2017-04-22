@@ -82,3 +82,27 @@ func GetLabel(arr []float64) (label int) {
 	}
 	return
 }
+
+func CompareArrays(arr1 []float64, arr2 []float64) bool{
+	result := true
+	for i, val := range arr1{
+		if val != arr2[i]{
+			result = false
+		}
+	}
+	return result
+}
+
+func GetArrFromProba(probs []float64) []float64 {
+	max_ind := 0
+	max_val := 0.
+	for i, val := range probs {
+		if val > max_val{
+			max_val = val
+			max_ind = i
+		}
+	}
+	result := make([]float64, len(probs))
+	result[max_ind] = 1
+	return result
+}

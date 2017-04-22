@@ -1,6 +1,7 @@
 package neural_core
 
 import ()
+//import "fmt"
 
 type Activation func(x float64) float64
 
@@ -42,8 +43,10 @@ func NewInputLayer(input_size, output_size int, activate NeuralFunction) (*Layer
 }
 
 func (layer *Layer) getNeuronPrediction(data []float64, ind int) float64 {
+	//fmt.Println(data)
 	result := -layer.neurons[ind][layer.input_size]
 	for i := 0; i < layer.input_size; i++ {
+	//	fmt.Println(i)
 		result += data[i] * layer.neurons[ind][i]
 	}
 	act_result := layer.funcs.activation(result)
