@@ -2,7 +2,8 @@ package neural_core
 
 import (
 	"math/rand"
-//	"fmt"
+	//	"fmt"
+	"sync"
 )
 
 //import "fmt"
@@ -52,7 +53,7 @@ func (layer *Layer) getNeuronPrediction(data []float64, ind int) float64 {
 	//fmt.Println(data)
 	result := -layer.neurons[ind][layer.input_size]
 	for i := 0; i < layer.input_size; i++ {
-	//	fmt.Println(i)
+		//	fmt.Println(i)
 		result += data[i] * layer.neurons[ind][i]
 	}
 	act_result := layer.funcs.activation(result)
@@ -63,22 +64,34 @@ func (layer *Layer) getNeuronPrediction(data []float64, ind int) float64 {
 
 func (layer *Layer) getLayerPrediction(data []float64) []float64 {
 	result := make([]float64, layer.output_size)
+	wg := sync.WaitGroup{}
+	wg.Add(layer.output_size)
 	for i := range layer.neurons {
+		go func(i int) {
 		result[i] = layer.getNeuronPrediction(data, i)
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 	return result
 }
 
 func (layer *Layer) updateWeights(input []float64, eps float64) {
 	//fmt.Println(layer.delta)
 	//fmt.Printf("eps: %.2f\n", eps)
+	wg := sync.WaitGroup{}
+	wg.Add(layer.output_size)
 	for i := 0; i < layer.output_size; i++ {
-		temp := eps * layer.delta[i]
-		for j := 0; j < layer.input_size; j++ {
-			layer.neurons[i][j] += temp * input[j]
-		}
-		layer.neurons[i][layer.input_size] = temp
+		go func(i int) {
+			temp := eps * layer.delta[i]
+			for j := 0; j < layer.input_size; j++ {
+				layer.neurons[i][j] += temp * input[j]
+			}
+			layer.neurons[i][layer.input_size] = temp
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 	for i := range layer.delta {
 		layer.delta[i] = 0
 	}
